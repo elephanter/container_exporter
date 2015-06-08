@@ -8,6 +8,7 @@ import (
 
 	"github.com/dcu/mongodb_exporter/collector"
 	"github.com/dcu/mongodb_exporter/shared"
+	"github.com/elephanter/nginx_exporter/nginx_export"
 	"github.com/elephanter/redis_exporter/exporter"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/golang/glog"
@@ -18,6 +19,8 @@ var (
 	listeningAddress   = flag.String("telemetry.address", ":9104", "Address on which to expose metrics.")
 	metricsEndpoint    = flag.String("telemetry.endpoint", "/metrics", "Path under which to expose metrics.")
 	addr               = flag.String("addr", "unix:///var/run/docker.sock", "Docker address to connect to")
+	nginxScrapeURI     = flag.String("nginx.scrape_uri", "http://localhost/nginx_status", "URI to nginx stub status page")
+	insecure           = flag.Bool("nginx.insecure", true, "Ignore server certificate if using https")
 	redisAddr          = flag.String("redis.addr", "localhost:6379", "Address of one or more redis nodes, comma separated")
 	mongodbAddr        = flag.String("mongodb.addr", "mongodb://localhost:27017", "Mongodb URI, format: [mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]")
 	enabledMongoGroups = flag.String("groups.enabled", "asserts,durability,background_flushing,connections,extra_info,global_lock,index_counters,network,op_counters,op_counters_repl,memory,locks,metrics", "Comma-separated list of groups to use, for more info see: docs.mongodb.org/manual/reference/command/serverStatus/")
@@ -61,6 +64,9 @@ func main() {
 
 	docker_exporter := NewExporter(manager, *dockerClient, labels)
 	prometheus.MustRegister(docker_exporter)
+
+	nginx_exporter := nginx_export.NewExporter(*nginxScrapeURI, *insecure)
+	prometheus.MustRegister(nginx_exporter)
 
 	redisExporter := exporter.NewRedisExporter(strings.Split(*redisAddr, ","), "redis")
 	prometheus.MustRegister(redisExporter)
